@@ -1,23 +1,18 @@
-# Updating charge-lnd
+# Updating the upstream version
 
-charge-lnd is installed into the image at build time via `pip install charge-lnd==<version>` in `Dockerfile`. There is no `dockerTag` in the manifest — the image is built fresh from `Dockerfile`.
+charge-lnd publishes no Docker image and is not on PyPI. The image is built from upstream source at a pinned git tag (no `dockerTag` in the manifest — the manifest uses `dockerBuild`), so the upstream pin is the `--branch v<version>` argument on the `git clone` line in `Dockerfile`.
 
-## Finding the latest version
+## Determining the upstream version
 
-- **PyPI** (charge-lnd) — what the Dockerfile's `pip install` actually resolves against:
-  - `pip index versions charge-lnd`
-  - Or check https://pypi.org/project/charge-lnd/#history
-- **GitHub tags** (accumulator/charge-lnd) — upstream tags the PyPI publish corresponds to:
-  - `gh api repos/accumulator/charge-lnd/tags --jq '.[0].name'`
+- **charge-lnd** — [accumulator/charge-lnd](https://github.com/accumulator/charge-lnd). The latest release and the latest tag are the same; either query works:
+  ```bash
+  gh release view -R accumulator/charge-lnd --json tagName -q .tagName
+  gh api repos/accumulator/charge-lnd/tags --jq '.[0].name'
+  ```
 
-## Where the pin lives
+## Applying the bump
 
-The pin lives in `Dockerfile` on the `RUN pip install --no-cache-dir charge-lnd==<version>` line.
-
-## Steps to bump the version
-
-1. **`Dockerfile`** — bump `<version>` in `RUN pip install --no-cache-dir charge-lnd==<version>` to the new version.
-2. **`startos/versions/`** — create a new TypeScript file for the version (e.g., `v0.2.14.ts`) exporting `Version.of('0.2.14:1')`.
-3. **`startos/versions/index.ts`** — update the `VersionGraph` to point `current` to your new version file.
-4. **`README.md`** — update the AI consumer block if any structural changes were made (usually not required for simple version bumps).
-5. Commit, build (`make`), and test the new `.s9pk`.
+1. **`Dockerfile`** — bump the tag in `git clone --branch v<version> ...` to the new upstream tag.
+2. **`startos/versions/current.ts`** — update `version` (e.g. `0.3.2:0` — the downstream revision resets to `0` for each new upstream version) and `releaseNotes` in place. A _new_ version file is only needed when the bump requires a migration — see [Versions](https://docs.start9.com/packaging/versions.html).
+3. **`README.md` / `instructions.md`** — update if the bump changes anything user-visible (usually not required for simple version bumps).
+4. Build (`make`) and test the new `.s9pk`.

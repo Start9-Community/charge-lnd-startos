@@ -3,27 +3,27 @@ export const DEFAULT_LANG = 'en_US'
 const dict = {
   // main.ts
   'Starting Charge LND...': 0,
-  'Daemon status': 1,
-  'Charge LND is running': 2,
-  'Charge LND is not responding': 3,
-  '— next evaluation in {mins}m.': 4,
-  '— evaluating channels now...': 5,
+  'Fee Policy Scheduler': 1,
+  'Waiting for the first policy evaluation. If this persists, check the service logs.': 2,
+  'The last scheduled evaluation appears to have failed. Check the service logs.': 3,
+  'Charge LND is evaluating channels now...': 4,
+  'Charge LND is running — next evaluation in ${mins}m.': 5,
 
-  // editConfig.ts
+  // actions/editConfig.ts
   'Run Interval (Seconds)': 6,
   'How often Charge LND runs. Default is 3600 (1 hour). Minimum 60 seconds.': 7,
   'Fee Policies (charge.config)': 8,
   'Define your routing policies in INI format.': 9,
   'Edit Configuration': 10,
-  'Update your fee policies and execution timer. Changes are applied immediately.': 11,
-  'Configuration Saved & Applied': 12,
-  'No output (fees already correct or no channels matched).': 13,
+  'Update your fee policies and run interval. If the service is running, changes are applied immediately.': 11,
+  'Configuration saved': 12,
+  'If Charge LND is running, your new policies are being applied now. Otherwise they will be applied the next time it starts.': 13,
 
-  // manifest
-  'Policy based fee manager for LND': 14,
-  'Charge LND matches your open Lightning channels against customizable criteria and applies channel fees based on matching policies.': 15,
-  'Required to connect to your Lightning node and apply fee policies.': 16,
-  'Charge LND will run every hour to apply your fee policies based on the charge.config file.': 17,
+  // actions/previewPolicies.ts
+  'Preview Policies': 14,
+  'Run charge-lnd in dry-run mode to see which channels would match which policies and what fees would be set. No fees are changed.': 15,
+  'Dry Run Results': 16,
+  'No output. No channels matched your policies, or no changes would be made.': 17,
 } as const
 
 /**
