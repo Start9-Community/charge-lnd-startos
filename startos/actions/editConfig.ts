@@ -1,22 +1,20 @@
-import { sdk } from '../sdk'
-import { i18n } from '../i18n'
-import { chargeConfig } from '../fileModels/charge.config'
+import {
+  chargeConfig,
+  chargeConfigCandidate,
+} from '../fileModels/charge.config'
 import { settingsJson } from '../fileModels/settings.json'
-import { configPath, dataDir, lndCertPath, lndMacaroonPath, lndMount, lndSocket } from '../utils'
+import { i18n } from '../i18n'
+import { sdk } from '../sdk'
+import { candidateConfigPath, dataDir, stripAnsi } from '../utils'
 
 const { InputSpec, Value } = sdk
-
-const escapeHtml = (str: string) => str
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#039;')
 
 export const configInputSpec = InputSpec.of({
   interval: Value.number({
     name: i18n('Run Interval (Seconds)'),
-    description: i18n('How often Charge LND runs. Default is 3600 (1 hour). Minimum 60 seconds.'),
+    description: i18n(
+      'How often Charge LND runs. Default is 3600 (1 hour). Minimum 60 seconds.',
+    ),
     required: true,
     default: 3600,
     min: 60,
@@ -26,147 +24,94 @@ export const configInputSpec = InputSpec.of({
     name: i18n('Fee Policies (charge.config)'),
     description: i18n('Define your routing policies in INI format.'),
     required: true,
-    default: '',
+    default: null,
   }),
 })
 
 export const editConfig = sdk.Action.withInput(
+  // id
   'edit-config',
-  async () => ({
+
+  // metadata
+  async ({ effects }) => ({
     name: i18n('Edit Configuration'),
-    description: i18n('Update your fee policies and execution timer. Changes are applied immediately.'),
+    description: i18n(
+      'Update your fee policies and run interval. If the service is running, changes are applied immediately.',
+    ),
     warning: null,
     allowedStatuses: 'any',
-    group: 'Configuration',
+    group: null,
     visibility: 'enabled',
   }),
+
+  // input spec
   configInputSpec,
-  async ({ effects }) => {
-    const currentConfig = await chargeConfig.read().once()
-    const settings = await settingsJson.read().once()
-    return { 
-      interval: settings?.intervalSeconds || 3600,
-      configText: currentConfig || '',
-    }
-  },
+
+  // prefill
+  async ({ effects }) => ({
+    interval:
+      (await settingsJson.read((s) => s.intervalSeconds).once()) ?? undefined,
+    configText: (await chargeConfig.read().once()) ?? undefined,
+  }),
+
+  // execution
   async ({ effects, input }) => {
-    await chargeConfig.write(effects, input.configText)
-    await settingsJson.merge(effects, { intervalSeconds: input.interval })
-    await sdk.restart(effects)
-    
+    // Validate the submitted config with upstream's own parser before
+    // committing it. The candidate lives at an unwatched path, so an invalid
+    // config never reaches the daemon. `--check` parses the file (including
+    // ${section:key} interpolation) and exits before connecting to LND, so
+    // this works whether or not LND is running.
+    await chargeConfigCandidate.write(effects, input.configText)
     const res = await sdk.SubContainer.withTemp(
       effects,
       { imageId: 'charge-lnd' },
-      sdk.Mounts.of()
-        .mountVolume({ volumeId: 'main', subpath: null, mountpoint: dataDir, readonly: false })
-        .mountDependency({ dependencyId: 'lnd', volumeId: 'main', subpath: null, mountpoint: lndMount, readonly: true }),
-      'charge-lnd-apply',
-      async (sub) => sub.exec([
-        'charge-lnd', '-v',
-        '--grpc', lndSocket,
-        '--tlscert', lndCertPath,
-        '--macaroon', lndMacaroonPath,
-        '-c', configPath,
-      ]),
+      sdk.Mounts.of().mountVolume({
+        volumeId: 'main',
+        subpath: null,
+        mountpoint: dataDir,
+        readonly: true,
+      }),
+      'charge-lnd-check',
+      async (sub) =>
+        sub.exec(['charge-lnd', '--check', '-c', candidateConfigPath]),
     )
-
-    const stdout = res.stdout.toString().trim()
-    const stderr = res.stderr.toString().trim()
-    const combinedOutput = [stdout, stderr].filter(Boolean).join('\n') || i18n('No output (fees already correct or no channels matched).')
-
     if (res.exitCode !== 0) {
-      throw new Error(escapeHtml(combinedOutput))
-    }
-
-    const lines = combinedOutput.split('\n')
-    const channels: { header: string; details: string[] }[] = []
-    let currentChannel: { header: string; details: string[] } | null = null
-    let preChannelText: string[] = []
-    let postChannelText: string[] = []
-    let foundFirstChannel = false
-
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed) continue
-
-      const isHeader = /^\d+x\d+x\d+/.test(trimmed)
-
-      if (isHeader) {
-        foundFirstChannel = true
-        if (currentChannel) channels.push(currentChannel)
-        currentChannel = { header: trimmed, details: [] }
-      } else {
-        if (currentChannel) {
-          currentChannel.details.push(line)
-        } else if (!foundFirstChannel) {
-          preChannelText.push(line)
-        } else {
-          postChannelText.push(line)
+      const output = stripAnsi(
+        [res.stdout.toString().trim(), res.stderr.toString().trim()]
+          .filter(Boolean)
+          .join('\n'),
+      )
+      // Parse failures surface as a Python traceback; show only the final
+      // exception message (plus any indented detail lines that follow it),
+      // not the stack frames.
+      const lines = output.split('\n')
+      let errStart = -1
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (/^\w[\w.]*(Error|Exception)\b/.test(lines[i])) {
+          errStart = i
+          break
         }
       }
-    }
-    if (currentChannel) channels.push(currentChannel)
-
-    let bodyHtml = ''
-
-    if (preChannelText.length > 0) {
-      bodyHtml += `<pre>${escapeHtml(preChannelText.join('\n'))}</pre>`
-    }
-
-    if (channels.length > 0) {
-      channels.forEach((ch, index) => {
-        const openAttr = index === 0 ? 'open' : ''
-        
-        const headerMatch = ch.header.match(/^(\d+x\d+x\d+)\s+\[(.*)\|([^\]]+)\]$/)
-        let formattedHeader = escapeHtml(ch.header)
-        if (headerMatch) {
-          const [_, chanId, alias, pubkey] = headerMatch
-          formattedHeader = `<span class="g-warning">${escapeHtml(chanId)}</span> &nbsp;|&nbsp; <span class="g-primary">${escapeHtml(alias)}</span> <span class="g-secondary">${escapeHtml(pubkey)}</span>`
-        }
-
-        let detailsHtml = escapeHtml(ch.details.join('\n'))
-        
-        detailsHtml = detailsHtml.replace(/(\d+)\s*➜\s*(\d+)/g, '<span class="g-info">$1 ➜ $2</span>')
-
-        bodyHtml += `
-          <details ${openAttr}>
-            <summary>${formattedHeader}</summary>
-            <pre>${detailsHtml}</pre>
-          </details>
-        `
-      })
-    } else if (preChannelText.length === 0 && postChannelText.length === 0) {
-      bodyHtml = `<pre>${escapeHtml(combinedOutput)}</pre>`
+      throw new Error(
+        `Configuration was NOT saved — charge-lnd rejected it:\n${
+          (errStart >= 0 ? lines.slice(errStart).join('\n') : output) ||
+          'unknown parse error'
+        }`,
+      )
     }
 
-    if (postChannelText.length > 0) {
-      bodyHtml += `<pre>${escapeHtml(postChannelText.join('\n'))}</pre>`
-    }
+    await chargeConfig.write(effects, input.configText)
+    await settingsJson.merge(effects, { intervalSeconds: input.interval })
 
-    const htmlMessage = `
-      <table class="g-table">
-        <thead>
-          <tr>
-            <th>
-              <span class="g-primary"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxZW0iIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiMwMGZmYjAiPjx0aXRsZSB4bWxucz0iIiBmaWxsPSIjMDBmZmIwIj5jaGFubmVsPC90aXRsZT48cGF0aCBmaWxsPSIjMDBmZmIwIiBkPSJNMjAgMTZhMyAzIDAgMCAwLTEuNzMuNTZsLTIuNDUtMS40NUEzLjcgMy43IDAgMCAwIDE2IDE0YTQgNCAwIDAgMC0zLTMuODZWNy44MmEzIDMgMCAxIDAtMiAwdjIuMzJBNCA0IDAgMCAwIDggMTRhMy43IDMuNyAwIDAgMCAuMTggMS4xMWwtMi40NSAxLjQ1QTMgMyAwIDAgMCA0IDE2YTMgMyAwIDEgMCAzIDNhMyAzIDAgMCAwLS4xMi0uOGwyLjMtMS4zN2E0IDQgMCAwIDAgNS42NCAwbDIuMyAxLjM3QTMgMyAwIDEgMCAyMCAxNk00IDIwYTEgMSAwIDEgMSAxLTFhMSAxIDAgMCAxLTEgMW04LTE2YTEgMSAwIDEgMS0xIDFhMSAxIDAgMCAxIDEtMW0wIDEyYTIgMiAwIDEgMSAyLTJhMiAyIDAgMCAxLTIgMm04IDRhMSAxIDAgMSAxIDEtMWExIDEgMCAwIDEtMSAxIi8+PC9zdmc+" alt="channel" width="18" height="18"> CHANNELS EVALUATED</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              ${bodyHtml}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    `
-
+    // No explicit restart needed: main.ts watches both values reactively, so
+    // a running daemon restarts and applies the new policies immediately.
     return {
       version: '1',
-      title: i18n('Configuration Saved & Applied'),
-      message: htmlMessage,
+      title: i18n('Configuration saved'),
+      message: i18n(
+        'If Charge LND is running, your new policies are being applied now. Otherwise they will be applied the next time it starts.',
+      ),
       result: null,
     }
-  }
+  },
 )

@@ -1,11 +1,11 @@
 import { setupManifest } from '@start9labs/start-sdk'
-import { depLndDescription, long, short } from './i18n'
+import { alertInstall, depLndDescription, long, short } from './i18n'
 
 export const manifest = setupManifest({
   id: 'charge-lnd',
   title: 'Charge LND',
   license: 'MIT',
-  packageRepo: 'https://github.com/salenjak/charge-lnd-startos',
+  packageRepo: 'https://github.com/Start9-Community/charge-lnd-startos',
   upstreamRepo: 'https://github.com/accumulator/charge-lnd',
   marketingUrl: 'https://github.com/accumulator/charge-lnd',
   donationUrl: null,
@@ -13,12 +13,12 @@ export const manifest = setupManifest({
   volumes: ['main'],
   images: {
     'charge-lnd': {
-      source: { dockerBuild: {} }, 
+      source: { dockerBuild: {} },
       arch: ['x86_64', 'aarch64'],
     },
   },
   alerts: {
-    install: null,
+    install: alertInstall,
     update: null,
     uninstall: null,
     restore: null,

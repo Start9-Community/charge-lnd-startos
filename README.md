@@ -32,11 +32,11 @@ Charge-LND is a command-line tool that matches your open Lightning channels agai
 | Property | Value |
 |---|---|
 | Base image | `python:3.11-slim` (built from local `Dockerfile`) |
-| Install method | `pip install charge-lnd` |
+| Install method | `pip install` from the upstream git tag pinned in `Dockerfile` (charge-lnd is not on PyPI and publishes no image) |
 | Image source | `dockerBuild` (no official upstream StartOS image is published) |
 | Architectures | x86_64, aarch64 |
 
-The image installs `charge-lnd` globally via pip. We build from scratch to guarantee the container runs as `root`. 
+The image installs `charge-lnd` globally via pip from a clone of the pinned upstream tag. We build from scratch to guarantee the container runs as `root`.
 
 ## Volume and Data Layout
 
@@ -48,28 +48,31 @@ The image installs `charge-lnd` globally via pip. We build from scratch to guara
 charge-lnd runs as root inside the container. This is required so it can read LND's root-owned `0600` `admin.macaroon`, which is mounted read-only and cannot be re-permissioned from this side.
 
 **Key paths on the `main` volume:**
-- `charge.config` — The INI file defining your fee policies (managed by StartOS UI).
-- `settings.json` — Stores the daemon execution timer interval and last run timestamp.
+- `charge.config` — The INI file defining your fee policies (managed via the Edit Configuration action). Stored as raw text — charge-lnd's ConfigParser dialect (ExtendedInterpolation, dotted keys, ordered cascading sections, comments) does not survive a structured INI round trip.
+- `settings.json` — Stores the run interval (user configuration only).
+- `.lastRun` — Unix timestamp of the last successful run, written by the daemon loop and read by the health check. Kept separate from `settings.json` so daemon state never collides with user configuration.
+- `.charge.config.candidate` — Transient scratch file used to validate submitted configs with `charge-lnd --check` before they are committed to `charge.config`.
 
 ## Installation and First-Run Flow
 
 | Step | Upstream | StartOS |
 |---|---|---|
-| Installation | `pip install charge-lnd` | Install from marketplace |
+| Installation | Build from source | Install from marketplace |
 | LND connection | Manual CLI flags | Auto-injected via wrapper daemon loop |
-| Configuration | Local text editor | StartOS UI Config editor |
+| Configuration | Local text editor | StartOS Actions form |
 
 **First-run steps:**
 1. Install LND on StartOS and let it finish syncing.
-2. Install charge-lnd from the marketplace. Read the install alert — this service is a background daemon.
-3. Open the **Actions** menu and click **Edit Configuration** to set your fee policies and timer.
-4. Start the service. It will automatically connect to LND and apply your policies on the defined interval.
+2. Install charge-lnd from the marketplace. The install alert explains that it is a background daemon that ships with no active policies.
+3. Open the **Actions** menu and click **Edit Configuration** to set your fee policies and run interval. The seeded `charge.config` is a fully commented-out example, so charge-lnd changes no fees until you define a policy.
+4. Optionally run **Preview Policies** to see, without changing anything, which channels would match which policies.
+5. Start the service. It connects to LND and applies your policies on the configured interval.
 
 ## Configuration Management
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `charge.config` | 3-tier ratio policy | User-defined INI file containing fee policies and channel matching criteria. |
+| `charge.config` | Commented-out example (no active policies) | User-defined INI file containing fee policies and channel matching criteria. |
 | `settings.json` | `3600` seconds | How often the daemon loop executes `charge-lnd`. |
 | `--tlscert` | `/mnt/lnd/tls.cert` | LND TLS certificate path (Locked by wrapper). |
 | `--macaroon` | `/mnt/lnd/.../admin.macaroon` | LND admin macaroon path (Locked by wrapper). |
@@ -92,11 +95,12 @@ The LND `main` volume is mounted read-only into the charge-lnd container at `/mn
 
 ## Actions
 
-The StartOS UI surfaces convenience actions. They exist so users can configure the daemon and trigger it without SSH'ing in.
+The StartOS UI surfaces convenience actions. They exist so users can configure and inspect the daemon without SSH'ing in.
 
-| Action | Group | Purpose |
-|---|---|---|
-| Edit Configuration | Configuration | Opens a native UI form to edit the `charge.config` INI and the execution timer. Upon saving, it immediately runs `charge-lnd` and displays the evaluation log. |
+| Action | Purpose |
+|---|---|
+| Edit Configuration | Opens a native UI form to edit the `charge.config` INI and the run interval. The submitted config is first written to an unwatched candidate path and validated with upstream's own parser (`charge-lnd --check`); invalid configs are rejected with the parser error and nothing is saved. On success, `main.ts` watches both values reactively, so a running daemon restarts and applies the new policies immediately — no explicit restart in the action. |
+| Preview Policies | Runs `charge-lnd --dry-run -v` in a temporary container and displays the (ANSI-stripped, HTML-escaped) output in a `<pre>` block: which channels match which policies and what fees would be set. Changes nothing. |
 
 All other charge-lnd functionality is available from inside the container shell via SSH.
 
@@ -112,11 +116,11 @@ All other charge-lnd functionality is available from inside the container shell 
 
 ## Health Checks
 
-| Check | Display Name | Method | Messages |
+| Check | Display Name | Method | Results |
 |---|---|---|---|
-| Primary daemon | Daemon status | Runs `charge-lnd --dry-run` and reads `settings.json` | Charge LND is running. Next evaluation in Xm / Charge LND is not responding |
+| Primary daemon | Fee Policy Scheduler | Reads the `.lastRun` timestamp and the configured interval | `starting` until the first successful run; `success` with a live countdown to the next evaluation (or "evaluating now"); `failure` when the last run is more than 10 minutes overdue |
 
-A successful `--dry-run` invocation means charge-lnd can reach LND using the mounted credentials and parse the user's config file. The health check also calculates a live countdown to the next scheduled run.
+The daemon loop only writes `.lastRun` after a successful `charge-lnd` invocation, and retries failed runs every 60 seconds instead of waiting a full interval (e.g. when the service starts before LND is ready). The health check is therefore a pure file read — it never invokes `charge-lnd` or touches LND.
 
 ## Limitations and Differences
 
@@ -135,17 +139,29 @@ A successful `--dry-run` invocation means charge-lnd can reach LND using the mou
 
 ```yaml
 package_id: charge-lnd
-image: local-dockerBuild (python:3.11-slim + pip charge-lnd)
+upstream: https://github.com/accumulator/charge-lnd
+image:
+  source: dockerBuild (local Dockerfile)
+  base: python:3.11-slim
 architectures: [x86_64, aarch64]
 volumes:
-  main: /data
-ports: []
+  main:
+    charge.config: user fee policies (FileHelper.string; seeded with a commented-out example)
+    settings.json: run interval (FileHelper.json)
+    .lastRun: last successful run timestamp (written by daemon loop)
+  mounts:
+    - /mnt/lnd: lnd dependency volume (read-only)
+interfaces: []
 dependencies:
-  lnd (required; see manifest for version range)
+  lnd:
+    kind: running
+    versionRange: ">=0.20.1-beta:3"
+    healthChecks: [lnd]
 actions:
   - edit-config
+  - preview-policies
 health_checks:
-  - primary: charge-lnd --dry-run exit == 0
+  - primary: .lastRun timestamp vs configured interval (no LND calls)
 backup_volumes:
   - main
 fixed_config:
@@ -153,4 +169,3 @@ fixed_config:
     tlscert: /mnt/lnd/tls.cert
     macaroon: /mnt/lnd/data/chain/bitcoin/mainnet/admin.macaroon
     grpc: lnd.startos:10009
-access: SSH into server, then run `start-cli package attach charge-lnd`

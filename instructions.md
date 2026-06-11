@@ -13,11 +13,13 @@
 
 ## Getting set up
 
+charge-lnd installs with no active policies — until you define one, it changes nothing.
+
 1. Ensure LND is installed, running, and fully synced on your StartOS server.
-2. Start the charge-lnd service from its dashboard page.
-3. Navigate to **Actions** and click **Edit Configuration**.
-4. Set your desired execution timer (e.g., `3600` for every hour) and paste your routing policies into the text area.
-5. Click **Submit** to save. The app will instantly apply your new policies and display a detailed evaluation log.
+2. Navigate to **Actions** and click **Edit Configuration**. Set your desired run interval (e.g., `3600` for every hour) and write your routing policies into the text area, using the commented-out example as a starting point.
+3. Click **Submit** to save. Your config is checked with charge-lnd's own parser first — if it contains a syntax error, nothing is saved and the error is shown.
+4. Run **Preview Policies** to double-check, without changing any fees, which channels your policies match and what fees would be set.
+5. Start the service. It applies your policies right away, then re-evaluates on your configured interval.
 
 ## Using charge-lnd
 
@@ -25,6 +27,7 @@ Charge LND operates entirely in the background. Once configured, it will automat
 
 ### Actions
 
-The service page exposes a single, unified action to manage your node directly from the dashboard:
+The service page exposes two actions to manage everything directly from the dashboard:
 
-- **Edit Configuration** — Opens a native UI form to edit your `charge.config` INI file and the background execution timer. Upon saving, it immediately runs `charge-lnd` and displays a formatted evaluation log showing exactly which channels matched which policies and what fees were applied.
+- **Edit Configuration** — Opens a native UI form to edit your `charge.config` INI file and the run interval. If the service is running, your new policies are applied immediately; otherwise they take effect the next time it starts.
+- **Preview Policies** — Runs charge-lnd in dry-run mode and shows you exactly which channels match which policies and what fees would be set, without changing anything. Use it to safely test policy edits.
