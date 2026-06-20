@@ -30,4 +30,4 @@ Charge LND operates entirely in the background. Once configured, it will automat
 The service page exposes two actions to manage everything directly from the dashboard:
 
 - **Edit Configuration** — Opens a native UI form to edit your `charge.config` INI file and the run interval. If the service is running, your new policies are applied immediately; otherwise they take effect the next time it starts.
-- **Preview Policies** — Runs charge-lnd in dry-run mode and shows you exactly which channels match which policies and what fees would be set, without changing anything. Use it to safely test policy edits.
+- **Preview Policies** — Runs charge-lnd in dry-run mode and shows you exactly which channels match which policies and what fees would be set, without changing anything. Use it to safely test policy edits and verify fee diffs before starting the service.
