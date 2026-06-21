@@ -100,7 +100,7 @@ The StartOS UI surfaces convenience actions. They exist so users can configure a
 | Action | Purpose |
 |---|---|
 | Edit Configuration | Opens a native UI form to edit the `charge.config` INI and the run interval. The submitted config is first written to an unwatched candidate path and validated with upstream's own parser (`charge-lnd --check`); invalid configs are rejected with the parser error and nothing is saved. On success, `main.ts` watches both values reactively, so a running daemon restarts and applies the new policies immediately — no explicit restart in the action. |
-| Preview Policies | Runs `charge-lnd --dry-run -v` in a temporary container and displays the (ANSI-stripped, HTML-escaped) output in a `<pre>` block: which channels match which policies and what fees would be set. Changes nothing. |
+| Preview Policies | Runs `charge-lnd --dry-run -v` in a temporary container and displays the output in a collapsible, mobile-responsive HTML layout (color-coding property names and fee diffs). To ensure the dry-run can accurately compare the saved config against the live LND state and display exact fee diffs (`current ➜ new`), this action is only available when the service is stopped. Changes nothing. |
 
 All other charge-lnd functionality is available from inside the container shell via SSH.
 
