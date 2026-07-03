@@ -8,7 +8,8 @@ import {
   lndCertPath,
   lndMacaroonPath,
   lndMount,
-  lndSocket,
+  lndSocketFallback,
+  readLndGrpcSocket,
   stripAnsi,
 } from '../utils'
 
@@ -30,6 +31,11 @@ export const previewPolicies = sdk.Action.withoutInput(
 
   // execution
   async ({ effects }) => {
+    // LND's gRPC endpoint over the LXC bridge (falls back to the legacy DNS
+    // socket if the bridge address is not yet resolvable).
+    const lndSocket =
+      (await readLndGrpcSocket(effects).once()) ?? lndSocketFallback
+
     const res = await sdk.SubContainer.withTemp(
       effects,
       { imageId: 'charge-lnd' },

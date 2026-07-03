@@ -11,7 +11,8 @@ import {
   lndCertPath,
   lndMacaroonPath,
   lndMount,
-  lndSocket,
+  lndSocketFallback,
+  readLndGrpcSocket,
 } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -30,6 +31,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // triggers for a restart.
   await chargeConfig.read().const(effects)
 
+  // LND's gRPC endpoint over the LXC bridge (LND pins its own TLS cert to the
+  // bridge address). Reactive: if the address changes, setupMain re-runs and
+  // the daemon restarts with the new socket. Falls back to the legacy DNS
+  // socket while the bridge address is still resolving.
+  const lndSocket =
+    (await readLndGrpcSocket(effects).const()) ?? lndSocketFallback
+
   const mounts = sdk.Mounts.of()
     .mountVolume({
       volumeId: 'main',
@@ -47,7 +55,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       readonly: true,
     })
 
-  const chargeSub = await sdk.SubContainer.of(
+  const chargeSub = sdk.SubContainer.of(
     effects,
     { imageId: 'charge-lnd' },
     mounts,
