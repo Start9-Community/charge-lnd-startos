@@ -35,15 +35,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // StartOS-issued cert covers the bridge address). The mapped value changes
   // only when the address does, so this .const() heals on LND
   // install/uninstall/port-change and never restarts on LND updates or
-  // lock/unlock cycles. A null (LND absent, or its gRPC binding not yet
-  // published pre-unlock) falls back to a loopback placeholder — just
-  // connection-refused, which the daemon's retry loop below already tolerates.
-  const lndSocket =
-    (await bridgeAddress(effects, {
-      packageId: 'lnd',
-      hostId: gRPCHostId,
-      internalPort: gRPCPort,
-    }).const()) ?? `127.0.0.1:${gRPCPort}`
+  // lock/unlock cycles. Null while LND is absent or its gRPC binding is not yet
+  // published (pre-unlock): the --grpc flag is dropped and charge-lnd fails to
+  // connect, which the daemon's retry loop below already tolerates. The
+  // .const() re-runs main with the real socket once LND's address resolves.
+  const lndSocket = await bridgeAddress(effects, {
+    packageId: 'lnd',
+    hostId: gRPCHostId,
+    internalPort: gRPCPort,
+  }).const()
 
   const mounts = sdk.Mounts.of()
     .mountVolume({
@@ -82,7 +82,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       command: [
         'sh',
         '-c',
-        `while true; do if charge-lnd --grpc ${lndSocket} --tlscert ${lndCertPath} --macaroon ${lndMacaroonPath} -c ${configPath}; then date +%s > ${lastRunPath}; sleep ${interval}; else sleep 60; fi; done`,
+        `while true; do if charge-lnd ${lndSocket ? `--grpc ${lndSocket} ` : ''}--tlscert ${lndCertPath} --macaroon ${lndMacaroonPath} -c ${configPath}; then date +%s > ${lastRunPath}; sleep ${interval}; else sleep 60; fi; done`,
       ],
     },
     ready: {

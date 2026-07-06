@@ -31,14 +31,14 @@ export const previewPolicies = sdk.Action.withoutInput(
 
   // execution
   async ({ effects }) => {
-    // LND's gRPC endpoint over the LXC bridge; a loopback placeholder is used
-    // while LND is absent or its gRPC binding is not yet published.
-    const lndSocket =
-      (await bridgeAddress(effects, {
-        packageId: 'lnd',
-        hostId: gRPCHostId,
-        internalPort: gRPCPort,
-      }).once()) ?? `127.0.0.1:${gRPCPort}`
+    // LND's gRPC endpoint over the LXC bridge. Null while LND is absent or its
+    // gRPC binding is not yet published: the --grpc flag is dropped and
+    // charge-lnd fails to connect, surfacing the "Is LND running?" error below.
+    const lndSocket = await bridgeAddress(effects, {
+      packageId: 'lnd',
+      hostId: gRPCHostId,
+      internalPort: gRPCPort,
+    }).once()
 
     const res = await sdk.SubContainer.withTemp(
       effects,
@@ -63,8 +63,7 @@ export const previewPolicies = sdk.Action.withoutInput(
           'charge-lnd',
           '--dry-run',
           '-v',
-          '--grpc',
-          lndSocket,
+          ...(lndSocket ? ['--grpc', lndSocket] : []),
           '--tlscert',
           lndCertPath,
           '--macaroon',

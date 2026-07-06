@@ -76,7 +76,7 @@ charge-lnd runs as root inside the container. This is required so it can read LN
 | `settings.json` | `3600` seconds | How often the daemon loop executes `charge-lnd`. |
 | `--tlscert` | `/mnt/lnd/tls.cert` | LND TLS certificate path (Locked by wrapper). |
 | `--macaroon` | `/mnt/lnd/.../admin.macaroon` | LND admin macaroon path (Locked by wrapper). |
-| `--grpc` | LND gRPC over the internal LXC bridge | LND gRPC socket, resolved reactively over the LXC bridge; a `127.0.0.1` loopback placeholder is used while LND is absent or not yet unlocked (Locked by wrapper). |
+| `--grpc` | LND gRPC over the internal LXC bridge | LND gRPC socket, resolved reactively over the LXC bridge; the flag is omitted while LND is absent or not yet unlocked, so charge-lnd retries until the address resolves (Locked by wrapper). |
 
 The LND connection parameters are locked to the correct paths for the bundled LND dependency. They are enforced by the wrapper's daemon loop, so the user only needs to manage the fee policies and timer via the StartOS Actions menu.
 
@@ -168,4 +168,4 @@ fixed_config:
   cli_flags:
     tlscert: /mnt/lnd/tls.cert
     macaroon: /mnt/lnd/data/chain/bitcoin/mainnet/admin.macaroon
-    grpc: LND gRPC over the internal LXC bridge (127.0.0.1 loopback placeholder while LND absent/locked)
+    grpc: LND gRPC over the internal LXC bridge (flag omitted while LND absent/locked)
