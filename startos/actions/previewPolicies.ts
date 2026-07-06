@@ -1,15 +1,15 @@
+import { gRPCHostId, gRPCPort } from 'lnd-startos/startos/interfaces'
 import { manifest as lndManifest } from 'lnd-startos/startos/manifest'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 import {
+  bridgeAddress,
   configPath,
   dataDir,
   escapeHtml,
   lndCertPath,
   lndMacaroonPath,
   lndMount,
-  lndSocketFallback,
-  readLndGrpcSocket,
   stripAnsi,
 } from '../utils'
 
@@ -31,10 +31,14 @@ export const previewPolicies = sdk.Action.withoutInput(
 
   // execution
   async ({ effects }) => {
-    // LND's gRPC endpoint over the LXC bridge (falls back to the legacy DNS
-    // socket if the bridge address is not yet resolvable).
+    // LND's gRPC endpoint over the LXC bridge; a loopback placeholder is used
+    // while LND is absent or its gRPC binding is not yet published.
     const lndSocket =
-      (await readLndGrpcSocket(effects).once()) ?? lndSocketFallback
+      (await bridgeAddress(effects, {
+        packageId: 'lnd',
+        hostId: gRPCHostId,
+        internalPort: gRPCPort,
+      }).once()) ?? `127.0.0.1:${gRPCPort}`
 
     const res = await sdk.SubContainer.withTemp(
       effects,

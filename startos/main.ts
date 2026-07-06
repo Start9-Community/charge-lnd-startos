@@ -1,3 +1,4 @@
+import { gRPCHostId, gRPCPort } from 'lnd-startos/startos/interfaces'
 import { manifest as lndManifest } from 'lnd-startos/startos/manifest'
 import { chargeConfig } from './fileModels/charge.config'
 import { lastRun } from './fileModels/lastRun'
@@ -5,14 +6,13 @@ import { settingsJson } from './fileModels/settings.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 import {
+  bridgeAddress,
   configPath,
   dataDir,
   lastRunPath,
   lndCertPath,
   lndMacaroonPath,
   lndMount,
-  lndSocketFallback,
-  readLndGrpcSocket,
 } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -31,12 +31,19 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // triggers for a restart.
   await chargeConfig.read().const(effects)
 
-  // LND's gRPC endpoint over the LXC bridge (LND pins its own TLS cert to the
-  // bridge address). Reactive: if the address changes, setupMain re-runs and
-  // the daemon restarts with the new socket. Falls back to the legacy DNS
-  // socket while the bridge address is still resolving.
+  // LND's gRPC endpoint over the LXC bridge (LND terminates its own TLS; its
+  // StartOS-issued cert covers the bridge address). The mapped value changes
+  // only when the address does, so this .const() heals on LND
+  // install/uninstall/port-change and never restarts on LND updates or
+  // lock/unlock cycles. A null (LND absent, or its gRPC binding not yet
+  // published pre-unlock) falls back to a loopback placeholder — just
+  // connection-refused, which the daemon's retry loop below already tolerates.
   const lndSocket =
-    (await readLndGrpcSocket(effects).const()) ?? lndSocketFallback
+    (await bridgeAddress(effects, {
+      packageId: 'lnd',
+      hostId: gRPCHostId,
+      internalPort: gRPCPort,
+    }).const()) ?? `127.0.0.1:${gRPCPort}`
 
   const mounts = sdk.Mounts.of()
     .mountVolume({
