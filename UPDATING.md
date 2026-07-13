@@ -4,11 +4,13 @@ charge-lnd publishes no Docker image and is not on PyPI. The image is built from
 
 ## Determining the upstream version
 
-- **charge-lnd** — [accumulator/charge-lnd](https://github.com/accumulator/charge-lnd). The latest release and the latest tag are the same; either query works:
+- **charge-lnd** — [accumulator/charge-lnd](https://github.com/accumulator/charge-lnd). Query the **tags**, not the releases:
   ```bash
-  gh release view -R accumulator/charge-lnd --json tagName -q .tagName
   gh api repos/accumulator/charge-lnd/tags --jq '.[0].name'
   ```
+
+  > [!WARNING]
+  > **Do not use `gh release view` on this repo.** Upstream stopped cutting GitHub releases after the 0.2.x line — the 0.3.x tags exist but have no release attached. `gh release view -R accumulator/charge-lnd` returns **v0.2.13 (November 2022)**, which is *below* the current pin (v0.3.1). Following it would look like a new version and silently propose a **downgrade**. The tag list is the only source of truth here.
 
 ## Applying the bump
 
