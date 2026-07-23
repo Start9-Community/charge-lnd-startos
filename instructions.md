@@ -13,7 +13,7 @@
 
 ## Getting set up
 
-charge-lnd installs with no active policies — until you define one, it changes nothing.
+Charge LND is a background service with no user interface. Once you define policies, it automatically modifies the routing fees of your open Lightning channels. It installs with no active policies, however — until you define one, it changes nothing.
 
 1. Ensure LND is installed, running, and fully synced on your StartOS server.
 2. Navigate to **Actions** and click **Edit Configuration**. Set your desired run interval (e.g., `3600` for every hour) and write your routing policies into the text area, using the commented-out example as a starting point.

@@ -63,7 +63,7 @@ charge-lnd runs as root inside the container. This is required so it can read LN
 
 **First-run steps:**
 1. Install LND on StartOS and let it finish syncing.
-2. Install charge-lnd from the marketplace. The install alert explains that it is a background daemon that ships with no active policies.
+2. Install charge-lnd from the marketplace. It is a background daemon that ships with no active policies.
 3. Open the **Actions** menu and click **Edit Configuration** to set your fee policies and run interval. The seeded `charge.config` is a fully commented-out example, so charge-lnd changes no fees until you define a policy.
 4. Optionally run **Preview Policies** to see, without changing anything, which channels would match which policies.
 5. Start the service. It connects to LND and applies your policies on the configured interval.
@@ -76,13 +76,13 @@ charge-lnd runs as root inside the container. This is required so it can read LN
 | `settings.json` | `3600` seconds | How often the daemon loop executes `charge-lnd`. |
 | `--tlscert` | `/mnt/lnd/tls.cert` | LND TLS certificate path (Locked by wrapper). |
 | `--macaroon` | `/mnt/lnd/.../admin.macaroon` | LND admin macaroon path (Locked by wrapper). |
-| `--grpc` | `lnd.startos:10009` | LND gRPC socket (Locked by wrapper). |
+| `--grpc` | LND gRPC over the internal LXC bridge | LND gRPC socket, resolved reactively over the LXC bridge; the flag is omitted while LND is absent or not yet unlocked, so charge-lnd retries until the address resolves (Locked by wrapper). |
 
 The LND connection parameters are locked to the correct paths for the bundled LND dependency. They are enforced by the wrapper's daemon loop, so the user only needs to manage the fee policies and timer via the StartOS Actions menu.
 
 ## Network Access and Interfaces
 
-charge-lnd does **not** expose any network interface. It is a command-line tool that speaks to LND over the private `lnd.startos` gRPC socket. No ports are opened on the host, Tor, or LAN.
+charge-lnd does **not** expose any network interface. It is a command-line tool that speaks to LND over its gRPC endpoint on the internal LXC bridge. No ports are opened on the host, Tor, or LAN.
 Access is via StartOS UI Actions only.
 
 ## Dependencies
@@ -125,7 +125,7 @@ The daemon loop only writes `.lastRun` after a successful `charge-lnd` invocatio
 ## Limitations and Differences
 
 - **No web UI.** charge-lnd is configured via StartOS Actions and runs as a background daemon.
-- **No external interfaces.** No Tor or LAN interface is declared; it speaks only to LND over the private `lnd.startos` gRPC socket.
+- **No external interfaces.** No Tor or LAN interface is declared; it speaks only to LND over its gRPC endpoint on the internal LXC bridge.
 - **Dynamic Timer.** The wrapper executes the upstream script based on a user-defined interval stored in `settings.json`.
 - **No user LND config.** All connection settings are derived from the bundled LND dependency.
 
@@ -168,4 +168,4 @@ fixed_config:
   cli_flags:
     tlscert: /mnt/lnd/tls.cert
     macaroon: /mnt/lnd/data/chain/bitcoin/mainnet/admin.macaroon
-    grpc: lnd.startos:10009
+    grpc: LND gRPC over the internal LXC bridge (flag omitted while LND absent/locked)

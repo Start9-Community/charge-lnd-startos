@@ -1,3 +1,4 @@
+import { gRPCHostId, gRPCPort } from 'lnd-startos/startos/interfaces'
 import { manifest as lndManifest } from 'lnd-startos/startos/manifest'
 import { chargeConfig } from './fileModels/charge.config'
 import { lastRun } from './fileModels/lastRun'
@@ -5,13 +6,13 @@ import { settingsJson } from './fileModels/settings.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 import {
+  bridgeAddress,
   configPath,
   dataDir,
   lastRunPath,
   lndCertPath,
   lndMacaroonPath,
   lndMount,
-  lndSocket,
 } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -30,6 +31,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // triggers for a restart.
   await chargeConfig.read().const(effects)
 
+  // LND's gRPC endpoint over the LXC bridge (LND terminates its own TLS; its
+  // StartOS-issued cert covers the bridge address). The mapped value changes
+  // only when the address does, so this .const() heals on LND
+  // install/uninstall/port-change and never restarts on LND updates or
+  // lock/unlock cycles. Null while LND is absent or its gRPC binding is not yet
+  // published (pre-unlock): the --grpc flag is dropped and charge-lnd fails to
+  // connect, which the daemon's retry loop below already tolerates. The
+  // .const() re-runs main with the real socket once LND's address resolves.
+  const lndSocket = await bridgeAddress(effects, {
+    packageId: 'lnd',
+    hostId: gRPCHostId,
+    internalPort: gRPCPort,
+  }).const()
+
   const mounts = sdk.Mounts.of()
     .mountVolume({
       volumeId: 'main',
@@ -47,7 +62,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       readonly: true,
     })
 
-  const chargeSub = await sdk.SubContainer.of(
+  const chargeSub = sdk.SubContainer.of(
     effects,
     { imageId: 'charge-lnd' },
     mounts,
@@ -67,7 +82,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       command: [
         'sh',
         '-c',
-        `while true; do if charge-lnd --grpc ${lndSocket} --tlscert ${lndCertPath} --macaroon ${lndMacaroonPath} -c ${configPath}; then date +%s > ${lastRunPath}; sleep ${interval}; else sleep 60; fi; done`,
+        `while true; do if charge-lnd ${lndSocket ? `--grpc ${lndSocket} ` : ''}--tlscert ${lndCertPath} --macaroon ${lndMacaroonPath} -c ${configPath}; then date +%s > ${lastRunPath}; sleep ${interval}; else sleep 60; fi; done`,
       ],
     },
     ready: {

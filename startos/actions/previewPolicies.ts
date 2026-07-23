@@ -1,14 +1,15 @@
+import { gRPCHostId, gRPCPort } from 'lnd-startos/startos/interfaces'
 import { manifest as lndManifest } from 'lnd-startos/startos/manifest'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 import {
+  bridgeAddress,
   configPath,
   dataDir,
   escapeHtml,
   lndCertPath,
   lndMacaroonPath,
   lndMount,
-  lndSocket,
   stripAnsi,
 } from '../utils'
 
@@ -30,6 +31,15 @@ export const previewPolicies = sdk.Action.withoutInput(
 
   // execution
   async ({ effects }) => {
+    // LND's gRPC endpoint over the LXC bridge. Null while LND is absent or its
+    // gRPC binding is not yet published: the --grpc flag is dropped and
+    // charge-lnd fails to connect, surfacing the "Is LND running?" error below.
+    const lndSocket = await bridgeAddress(effects, {
+      packageId: 'lnd',
+      hostId: gRPCHostId,
+      internalPort: gRPCPort,
+    }).once()
+
     const res = await sdk.SubContainer.withTemp(
       effects,
       { imageId: 'charge-lnd' },
@@ -53,8 +63,7 @@ export const previewPolicies = sdk.Action.withoutInput(
           'charge-lnd',
           '--dry-run',
           '-v',
-          '--grpc',
-          lndSocket,
+          ...(lndSocket ? ['--grpc', lndSocket] : []),
           '--tlscert',
           lndCertPath,
           '--macaroon',
