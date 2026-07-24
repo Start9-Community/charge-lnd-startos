@@ -6,7 +6,6 @@ import { settingsJson } from './fileModels/settings.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 import {
-  bridgeAddress,
   configPath,
   dataDir,
   lastRunPath,
@@ -39,11 +38,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // published (pre-unlock): the --grpc flag is dropped and charge-lnd fails to
   // connect, which the daemon's retry loop below already tolerates. The
   // .const() re-runs main with the real socket once LND's address resolves.
-  const lndSocket = await bridgeAddress(effects, {
-    packageId: 'lnd',
-    hostId: gRPCHostId,
-    internalPort: gRPCPort,
-  }).const()
+  const lndSocket = await sdk.host
+    .getBridgeAddress(effects, {
+      packageId: 'lnd',
+      hostId: gRPCHostId,
+      internalPort: gRPCPort,
+    })
+    .const()
 
   const mounts = sdk.Mounts.of()
     .mountVolume({
