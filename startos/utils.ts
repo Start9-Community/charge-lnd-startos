@@ -1,5 +1,3 @@
-import { sdk } from './sdk'
-
 export const lndMount = '/mnt/lnd' as const
 export const dataDir = '/data' as const
 export const configPath = `${dataDir}/charge.config` as const

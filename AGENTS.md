@@ -10,7 +10,7 @@ Work this package's `TODO.md` from top to bottom. Keep `README.md` (architecture
 
 ## This repo
 
-- **Package id is `charge-lnd`.** It is a background daemon with no network interface of its own. It is a dependent of `lnd`: it imports `gRPCHostId` / `gRPCPort` from `lnd-startos/startos/interfaces` and resolves LND's gRPC endpoint over the LXC bridge through the `bridgeAddress` helper in `startos/utils.ts` (`.const()` in `main.ts`, `.once()` in the preview-policies action), and mounts LND's `main` volume read-only at `/mnt/lnd` for the TLS cert + admin macaroon.
+- **Package id is `charge-lnd`.** It is a background daemon with no network interface of its own. It is a dependent of `lnd`: it imports `gRPCHostId` / `gRPCPort` from `lnd-startos/startos/interfaces` and resolves LND's gRPC endpoint over the LXC bridge through `sdk.host.getBridgeAddress` (`.const()` in `main.ts`, `.once()` in the preview-policies action), and mounts LND's `main` volume read-only at `/mnt/lnd` for the TLS cert + admin macaroon.
 
 ## Inspecting a running install
 
