@@ -159,7 +159,7 @@ interfaces: []
 dependencies:
   lnd:
     kind: running
-    versionRange: '>=0.20.1-beta:3'
+    versionRange: '>=0.21.1-beta:4'
     healthChecks: [lnd]
 actions:
   - edit-config
