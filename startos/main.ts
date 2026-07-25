@@ -31,8 +31,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   await chargeConfig.read().const(effects)
 
   // LND's gRPC endpoint over the LXC bridge (LND terminates its own TLS; its
-  // StartOS-issued cert covers the bridge address). The mapped value changes
-  // only when the address does, so this .const() heals on LND
+  // StartOS-issued cert covers the bridge address). The bridge address changes
+  // only when LND's binding does, so this .const() heals on LND
   // install/uninstall/port-change and never restarts on LND updates or
   // lock/unlock cycles. Null while LND is absent or its gRPC binding is not yet
   // published (pre-unlock): the --grpc flag is dropped and charge-lnd fails to
