@@ -6,12 +6,14 @@ Develop it inside a StartOS packaging workspace created by `start-cli s9pk init-
 which provides the packaging guide and agent context one level up. If you're reading this in a
 bare clone with no workspace, the full guide is at <https://docs.start9.com/packaging>.
 
-Work this package's `TODO.md` from top to bottom. Keep `README.md` (architecture, for developers and LLMs) and `instructions.md` (end-user docs) in sync with your changes.
+Work this package's `TODO.md` from top to bottom. Keep `README.md` (technical reference for an AI support or administering agent) and `instructions.md` (end-user docs) in sync with your changes.
 
 ## This repo
 
-- **Package id is `charge-lnd`.** It is a background daemon with no network interface of its own. It is a dependent of `lnd`: it imports `gRPCHostId` / `gRPCPort` from `lnd-startos/startos/interfaces` and resolves LND's gRPC endpoint over the LXC bridge through `sdk.host.getBridgeAddress` (`.const()` in `main.ts`, `.once()` in the preview-policies action), and mounts LND's `main` volume read-only at `/mnt/lnd` for the TLS cert + admin macaroon.
-
-## Inspecting a running install
-
-To run a command inside the service's container (read its generated config, grep app logs), use `start-cli package attach charge-lnd -n charge-lnd-sub -- <cmd>`. Select the subcontainer by **name** with `-n` (the name passed to `SubContainer.of` in `main.ts` — here `charge-lnd-sub`) or by image with `-i`. Note: `-s/--subcontainer` matches the internal **Guid**, not the name, so passing a name to `-s` fails with "no matching subcontainers".
+- **Never model `charge.config` as INI.** charge-lnd parses it with Python's ConfigParser using `ExtendedInterpolation` (`${section:key}`), dotted keys (`chan.min_capacity`, `node.id`), comma- and `file://`-lists, and **ordered** user-named sections with cascading semantics — a section without `strategy` masks properties onto later matches. An INI model corrupts all of that on round trip and strips comments. It is `FileHelper.string`, validated with upstream's own parser.
+- **Validate through `charge-lnd --check` on a candidate file, never in TypeScript.** `.charge.config.candidate` is deliberately _not_ the watched model, so an invalid submission never restarts the daemon.
+- **`.lastRun` must stay its own file.** Daemon state in `settings.json` previously caused restart loops and clobbered user settings — the daemon's write tripped the watch on the user's config.
+- **The daemon is a scheduler loop, not the tool.** charge-lnd is one-shot; the loop runs it, records the time on success, and sleeps. Keep the short retry on failure — it is what lets the service start before LND and recover without waiting a full interval.
+- **The admin macaroon is required and cannot be downgraded.** charge-lnd calls `UpdateChannelPolicy` and `UpdateChanStatus`; a lesser macaroon fails at the RPC.
+- **Dropping the `--grpc` flag when LND's address is unresolved is intentional.** LND publishes its gRPC binding only after a first unlock; the run then fails, the retry loop absorbs it, and the `.const()` heals `main` onto the real address once it appears.
+- **The seeded config is fully commented out on purpose.** charge-lnd treats a config with no active sections as a no-op, so a fresh install never silently rewrites channel fees. Don't ship a working default policy.
