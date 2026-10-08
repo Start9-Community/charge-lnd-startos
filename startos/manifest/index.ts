@@ -1,5 +1,5 @@
 import { setupManifest } from '@start9labs/start-sdk'
-import { depLndDescription, long, short } from './i18n'
+import { long, short } from './i18n'
 
 export const manifest = setupManifest({
   id: 'charge-lnd',
@@ -15,16 +15,7 @@ export const manifest = setupManifest({
     'charge-lnd': {
       source: { dockerBuild: {} },
       arch: ['x86_64', 'aarch64'],
-    },
-  },
-  dependencies: {
-    lnd: {
-      description: depLndDescription,
-      optional: false,
-      metadata: {
-        title: 'LND',
-        icon: 'https://raw.githubusercontent.com/Start9Labs/lnd-startos/refs/heads/master/icon.svg',
-      },
+      emulateMissing: false,
     },
   },
 })

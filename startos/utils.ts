@@ -30,19 +30,6 @@ export const defaultConfig = `# charge-lnd fee policies
 # fee_ppm = 10
 `
 
-/**
- * The StartOS UI renders action result messages as HTML, but its sanitizer
- * strips most tags and attributes. Escape command output first, then wrap in
- * `<pre>` — the combination that survives sanitization and renders monospace.
- */
-export const escapeHtml = (str: string) =>
-  str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-
 // charge-lnd colors its output with ANSI escape codes (termcolor) even when
 // stdout is not a TTY; strip them before displaying captured output.
 export const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, '')

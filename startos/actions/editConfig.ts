@@ -22,7 +22,9 @@ export const configInputSpec = InputSpec.of({
   }),
   configText: Value.textarea({
     name: i18n('Fee Policies (charge.config)'),
-    description: i18n('Define your routing policies in INI format.'),
+    description: i18n(
+      "Written in charge-lnd's INI policy format; the upstream README and examples list the available matchers and strategies. charge-lnd checks the configuration before it is saved, and nothing is saved if it does not parse.",
+    ),
     required: true,
     default: null,
   }),
