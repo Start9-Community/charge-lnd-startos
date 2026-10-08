@@ -13,7 +13,7 @@ const dict = {
   'Run Interval (Seconds)': 6,
   'How often Charge LND runs. Default is 3600 (1 hour). Minimum 60 seconds.': 7,
   'Fee Policies (charge.config)': 8,
-  'Define your routing policies in INI format.': 9,
+  "Written in charge-lnd's INI policy format; the upstream README and examples list the available matchers and strategies. charge-lnd checks the configuration before it is saved, and nothing is saved if it does not parse.": 9,
   'Edit Configuration': 10,
   'Update your fee policies and run interval. If the service is running, changes are applied immediately.': 11,
   'Configuration saved': 12,

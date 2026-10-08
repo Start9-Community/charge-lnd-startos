@@ -133,7 +133,7 @@ A dry run: shows what the current policies _would_ do to each channel, without c
 - **When to run it:** **only while stopped** — a dry run alongside the scheduler would be reading the same policies the loop is about to apply for real.
 - **What it changes:** nothing. It is upstream's dry-run mode.
 - **Repeat safety:** read-only.
-- **Outputs:** charge-lnd's own output, with its color codes stripped and wrapped for display.
+- **Outputs:** charge-lnd's own verbose dry-run output, color codes stripped, in a copyable monospace text box.
 
 **The sequencing this implies is the useful part:** edit policies, stop the service, preview, then start it again once the output matches your intent.
 

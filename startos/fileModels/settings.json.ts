@@ -1,7 +1,7 @@
 import { FileHelper, z } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
 
-const shape = z.object({
+const shape = z.looseObject({
   // How often (in seconds) the daemon loop runs charge-lnd.
   intervalSeconds: z.number().int().min(60).catch(3600),
 })
