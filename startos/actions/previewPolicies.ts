@@ -52,8 +52,8 @@ export const previewPolicies = sdk.Action.withoutInput(
         })
         .mountDependency<typeof lndManifest>({
           dependencyId: 'lnd',
-          volumeId: 'main',
-          subpath: null,
+          volumeId: 'public',
+          subpath: 'admin',
           mountpoint: lndMount,
           readonly: true,
         }),
@@ -95,7 +95,14 @@ export const previewPolicies = sdk.Action.withoutInput(
             'No output. No channels matched your policies, or no changes would be made.',
           ),
       result: output
-        ? { type: 'multiline', value: output, copyable: true }
+        ? {
+            type: 'multiline',
+            value: output,
+            copyable: true,
+            qr: false,
+            masked: false,
+            filename: null,
+          }
         : null,
     }
   },

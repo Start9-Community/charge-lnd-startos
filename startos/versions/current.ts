@@ -1,18 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.1:9',
+  version: '0.3.1:10',
   releaseNotes: {
-    en_US: `- Preview Policies shows charge-lnd's dry-run output in a copyable text box.
-- The Fee Policies field's description points to the upstream policy format and says that a configuration that does not parse is not saved.`,
-    es_ES: `- Vista previa de políticas muestra la salida de la prueba de charge-lnd en un cuadro de texto que se puede copiar.
-- La descripción del campo Políticas de tarifas remite al formato de políticas de upstream e indica que no se guarda una configuración que no se pueda analizar.`,
-    de_DE: `- Die Richtlinien-Vorschau zeigt die Ausgabe des Probelaufs von charge-lnd in einem kopierbaren Textfeld.
-- Die Beschreibung des Felds Gebührenrichtlinien verweist auf das Upstream-Richtlinienformat und gibt an, dass eine Konfiguration, die sich nicht einlesen lässt, nicht gespeichert wird.`,
-    pl_PL: `- Podgląd polityk pokazuje wynik próbnego uruchomienia charge-lnd w polu tekstowym, które można skopiować.
-- Opis pola Polityki opłat odsyła do formatu polityk upstream i informuje, że konfiguracja, której nie da się przetworzyć, nie jest zapisywana.`,
-    fr_FR: `- L'aperçu des politiques affiche la sortie de la simulation de charge-lnd dans une zone de texte copiable.
-- La description du champ Politiques de frais renvoie au format de politiques upstream et indique qu'une configuration qui ne peut pas être analysée n'est pas enregistrée.`,
+    en_US:
+      "Requires StartOS 0.4.1 or later. charge-lnd now reads only LND's TLS certificate and admin macaroon, and can no longer read LND's seed or other files. Requires LND 0.21.6-beta:3 or later.",
+    es_ES:
+      'Requiere StartOS 0.4.1 o posterior. charge-lnd ahora lee solo el certificado TLS y el macaroon de administrador de LND, y ya no puede leer la semilla ni otros archivos de LND. Requiere LND 0.21.6-beta:3 o posterior.',
+    de_DE:
+      'Erfordert StartOS 0.4.1 oder neuer. charge-lnd liest jetzt nur noch das TLS-Zertifikat und das Admin-Macaroon von LND und kann den Seed und andere Dateien von LND nicht mehr lesen. Erfordert LND 0.21.6-beta:3 oder neuer.',
+    pl_PL:
+      'Wymaga StartOS 0.4.1 lub nowszego. charge-lnd odczytuje teraz tylko certyfikat TLS i macaroon administratora LND i nie może już odczytać seeda ani innych plików LND. Wymaga LND 0.21.6-beta:3 lub nowszego.',
+    fr_FR:
+      'Nécessite StartOS 0.4.1 ou ultérieur. charge-lnd ne lit désormais que le certificat TLS et le macaron administrateur de LND, et ne peut plus lire la seed ni les autres fichiers de LND. Nécessite LND 0.21.6-beta:3 ou ultérieur.',
   },
   migrations: {
     up: async ({ effects }) => {},

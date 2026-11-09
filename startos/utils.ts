@@ -7,8 +7,7 @@ export const lastRunPath = `${dataDir}/.lastRun` as const
 export const lndCertPath = `${lndMount}/tls.cert` as const
 // Using a less privileged macaroon is not sufficient because charge-lnd
 // invokes LND policy-mutation RPCs (UpdateChannelPolicy, UpdateChanStatus).
-export const lndMacaroonPath =
-  `${lndMount}/data/chain/bitcoin/mainnet/admin.macaroon` as const
+export const lndMacaroonPath = `${lndMount}/admin.macaroon` as const
 // Seeded into charge.config on first install. Fully commented out: charge-lnd
 // treats a config with no active sections as a no-op, so no fees are touched
 // until the user deliberately defines policies via the Edit Configuration

@@ -53,12 +53,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
       mountpoint: dataDir,
       readonly: false,
     })
-    // LND volume (tls.cert + macaroons), readonly. See utils.ts for why the
+    // LND's public admin/ tier (tls.cert + admin.macaroon), readonly. See utils.ts for why the
     // admin macaroon is required.
     .mountDependency<typeof lndManifest>({
       dependencyId: 'lnd',
-      volumeId: 'main',
-      subpath: null,
+      volumeId: 'public',
+      subpath: 'admin',
       mountpoint: lndMount,
       readonly: true,
     })

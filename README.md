@@ -55,10 +55,10 @@ That timestamp file is the only thing the health check has to work from; there i
 
 One volume, plus a read-only view of LND's.
 
-| Volume            | Mount Point | Purpose                                       |
-| ----------------- | ----------- | --------------------------------------------- |
-| `main`            | `/data`     | Policies, the schedule setting, and run state |
-| LND's `main` (ro) | `/mnt/lnd`  | LND's TLS certificate and admin macaroon      |
+| Volume              | Mount Point | Purpose                                                          |
+| ------------------- | ----------- | ---------------------------------------------------------------- |
+| `main`              | `/data`     | Policies, the schedule setting, and run state                    |
+| LND's `public` (ro) | `/mnt/lnd`  | Only LND's `admin/` tier: its TLS certificate and admin macaroon |
 
 | Path                       | Written by | Holds                                |
 | -------------------------- | ---------- | ------------------------------------ |
@@ -90,9 +90,9 @@ Four models, and the choices between them are all deliberate.
 
 One, and it is required.
 
-| Dependency | Required | Health checks required | Mounted                         | Why                     |
-| ---------- | -------- | ---------------------- | ------------------------------- | ----------------------- |
-| LND        | Yes      | `lnd`                  | `main`, read-only at `/mnt/lnd` | The channels it adjusts |
+| Dependency | Required | Health checks required | Mounted                                           | Why                     |
+| ---------- | -------- | ---------------------- | ------------------------------------------------- | ----------------------- |
+| LND        | Yes      | `lnd`                  | `public` (`admin/` tier), read-only at `/mnt/lnd` | The channels it adjusts |
 
 **This package uses LND's admin macaroon, and it needs it.** charge-lnd calls policy-mutation RPCs, which a lesser macaroon cannot authorize. Anyone who can reach this service's configuration can therefore change your channel policies — treat it accordingly.
 
@@ -172,9 +172,8 @@ LND's own credentials are not backed up here — they belong to LND and are re-m
 2. **The admin macaroon is required**, because policy changes cannot be made with a lesser one.
 3. **Preview only runs while the service is stopped**, so checking a policy means pausing the scheduler.
 4. **Validation checks syntax, not intent.** A config that parses can still set fees you did not mean.
-5. **Mainnet only.** The macaroon path is pinned to Bitcoin mainnet.
-6. **No policies are applied out of the box**, deliberately — the seeded config is entirely commented out.
-7. **The schedule is a fixed interval**, not a calendar; there is no way to say "at 3am".
+5. **No policies are applied out of the box**, deliberately — the seeded config is entirely commented out.
+6. **The schedule is a fixed interval**, not a calendar; there is no way to say "at 3am".
 
 ---
 
@@ -189,7 +188,7 @@ architectures:
 subcontainers:
   - charge-lnd-sub
 volumes:
-  main: /data # LND's main volume is mounted read-only at /mnt/lnd
+  main: /data # LND's public admin/ tier is mounted read-only at /mnt/lnd
 file_models:
   - charge.config # raw text; validated with charge-lnd --check
   - .charge.config.candidate # scratch, for validating an edit
