@@ -1,6 +1,6 @@
 # Updating the upstream version
 
-charge-lnd publishes no Docker image and is not on PyPI. The image is built from upstream source at a pinned git tag (no `dockerTag` in the manifest — the manifest uses `dockerBuild`), so the upstream pin is the `--branch v<version>` argument on the `git clone` line in `Dockerfile`.
+charge-lnd publishes no Docker image and is not on PyPI. The image is built from upstream source at a pinned git tag (no `dockerTag` in the manifest — the manifest uses `dockerBuild`), so the upstream pin is the `CHARGE_LND_VERSION` (tag) and `CHARGE_LND_COMMIT` (the full commit SHA that tag must resolve to) args at the top of `Dockerfile`. The build checks the clone out at that commit and fails if the tag points anywhere else.
 
 ## Determining the upstream version
 
@@ -15,4 +15,10 @@ charge-lnd publishes no Docker image and is not on PyPI. The image is built from
 
 ## Applying the bump
 
-**`Dockerfile`** — bump the tag in `git clone --branch v<version> ...` to the new upstream tag.
+**`Dockerfile`** — set `CHARGE_LND_VERSION` to the new upstream tag and `CHARGE_LND_COMMIT` to the full commit SHA it points to:
+
+```bash
+git ls-remote https://github.com/accumulator/charge-lnd.git 'refs/tags/v<version>*'
+```
+
+For an annotated tag the listing has two lines; take the commit from the one ending `^{}`. Upstream doesn't sign its tags, so there's no signature to check.

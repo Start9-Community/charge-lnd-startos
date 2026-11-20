@@ -1,18 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.1:10',
+  version: '0.3.1:11',
   releaseNotes: {
     en_US:
-      "Requires StartOS 0.4.1 or later. charge-lnd now reads only LND's TLS certificate and admin macaroon, and can no longer read LND's seed or other files. Requires LND 0.21.6-beta:3 or later.",
+      'Requires StartOS 0.4.2 or later. The package now verifies that the charge-lnd source it builds is the exact v0.3.1 release commit.',
     es_ES:
-      'Requiere StartOS 0.4.1 o posterior. charge-lnd ahora lee solo el certificado TLS y el macaroon de administrador de LND, y ya no puede leer la semilla ni otros archivos de LND. Requiere LND 0.21.6-beta:3 o posterior.',
+      'Requiere StartOS 0.4.2 o posterior. El paquete ahora verifica que el código fuente de charge-lnd que compila es exactamente el commit de la versión v0.3.1.',
     de_DE:
-      'Erfordert StartOS 0.4.1 oder neuer. charge-lnd liest jetzt nur noch das TLS-Zertifikat und das Admin-Macaroon von LND und kann den Seed und andere Dateien von LND nicht mehr lesen. Erfordert LND 0.21.6-beta:3 oder neuer.',
+      'Erfordert StartOS 0.4.2 oder neuer. Das Paket prüft jetzt, dass der gebaute charge-lnd-Quellcode genau dem Release-Commit von v0.3.1 entspricht.',
     pl_PL:
-      'Wymaga StartOS 0.4.1 lub nowszego. charge-lnd odczytuje teraz tylko certyfikat TLS i macaroon administratora LND i nie może już odczytać seeda ani innych plików LND. Wymaga LND 0.21.6-beta:3 lub nowszego.',
+      'Wymaga StartOS 0.4.2 lub nowszego. Pakiet sprawdza teraz, czy budowany kod źródłowy charge-lnd to dokładnie commit wydania v0.3.1.',
     fr_FR:
-      'Nécessite StartOS 0.4.1 ou ultérieur. charge-lnd ne lit désormais que le certificat TLS et le macaron administrateur de LND, et ne peut plus lire la seed ni les autres fichiers de LND. Nécessite LND 0.21.6-beta:3 ou ultérieur.',
+      'Nécessite StartOS 0.4.2 ou ultérieur. Le paquet vérifie désormais que le code source de charge-lnd qu’il compile correspond exactement au commit de la version v0.3.1.',
   },
   migrations: {
     up: async ({ effects }) => {},

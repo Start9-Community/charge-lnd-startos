@@ -35,7 +35,7 @@
 
 ## Image and Container Runtime
 
-One image, built here.
+One image, built here from upstream's git tag, checked out at the commit the `Dockerfile` pins for it.
 
 | Property      | Value                                         |
 | ------------- | --------------------------------------------- |
